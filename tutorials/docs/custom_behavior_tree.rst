@@ -5,6 +5,7 @@ Creating a Custom Behavior Tree
 
 - `Overview`_
 - `Prerequisites`_
+- `Introduction To Nav2 Specific Nodes`_
 - `Navigate With Replanning and Recovery`_
 - `NavigateWithReplanning`_
 - `RecoveryFallback`_
@@ -32,6 +33,10 @@ Prerequisites
     * There is a short explaination in `navigation concepts <../../concepts/index.html>`_
     * General tutorial (not Nav2 specific) on the `BehaviorTree CPP V3 <https://www.behaviortree.dev/>`_ website.
 
+Introduction To Nav2 Specific Nodes
+===================================
+
+
 Navigate With Replanning and Recovery
 =====================================
 
@@ -41,40 +46,40 @@ This behavior tree replans the global path periodically at 1 Hz and it also has 
 .. code-block:: xml
 
     <root main_tree_to_execute="MainTree">
-      <BehaviorTree ID="MainTree">
-          <RecoveryNode number_of_retries="6" name="NavigateRecovery">
-          <PipelineSequence name="NavigateWithReplanning">
-              <RateController hz="1.0">
-              <RecoveryNode number_of_retries="1" name="ComputePathToPose">
-                  <ComputePathToPose goal="{goal}" path="{path}" planner_id="GridBased"/>
-                  <ReactiveFallback name="ComputePathToPoseRecoveryFallback">
-                  <GoalUpdated/>
-                  <ClearEntireCostmap name="ClearGlobalCostmap-Context" service_name="global_costmap/clear_entirely_global_costmap"/>
-                  </ReactiveFallback>
-              </RecoveryNode>
-              </RateController>
-              <RecoveryNode number_of_retries="1" name="FollowPath">
-              <FollowPath path="{path}" controller_id="FollowPath"/>
-              <ReactiveFallback name="FollowPathRecoveryFallback">
-                  <GoalUpdated/>
-                  <ClearEntireCostmap name="ClearLocalCostmap-Context" service_name="local_costmap/clear_entirely_local_costmap"/>
-              </ReactiveFallback>
-              </RecoveryNode>
-          </PipelineSequence>
-          <ReactiveFallback name="RecoveryFallback">
-              <GoalUpdated/>
-              <RoundRobin name="RecoveryActions">
-              <Sequence name="ClearingActions">
-                  <ClearEntireCostmap name="ClearLocalCostmap-Subtree" service_name="local_costmap/clear_entirely_local_costmap"/>
-                  <ClearEntireCostmap name="ClearGlobalCostmap-Subtree" service_name="global_costmap/clear_entirely_global_costmap"/>
-              </Sequence>
-              <Spin spin_dist="1.57"/>
-              <Wait wait_duration="5"/>
-              <BackUp backup_dist="0.15" backup_speed="0.025"/>
-              </RoundRobin>
-          </ReactiveFallback>
-          </RecoveryNode>
-      </BehaviorTree>
+        <BehaviorTree ID="MainTree">
+            <RecoveryNode number_of_retries="6" name="NavigateRecovery">
+                <PipelineSequence name="NavigateWithReplanning">
+                    <RateController hz="1.0">
+                        <RecoveryNode number_of_retries="1" name="ComputePathToPose">
+                            <ComputePathToPose goal="{goal}" path="{path}" planner_id="GridBased"/>
+                            <ReactiveFallback name="ComputePathToPoseRecoveryFallback">
+                                <GoalUpdated/>
+                                <ClearEntireCostmap name="ClearGlobalCostmap-Context" service_name="global_costmap/clear_entirely_global_costmap"/>
+                            </ReactiveFallback>
+                        </RecoveryNode>
+                    </RateController>
+                    <RecoveryNode number_of_retries="1" name="FollowPath">
+                        <FollowPath path="{path}" controller_id="FollowPath"/>
+                        <ReactiveFallback name="FollowPathRecoveryFallback">
+                            <GoalUpdated/>
+                            <ClearEntireCostmap name="ClearLocalCostmap-Context" service_name="local_costmap/clear_entirely_local_costmap"/>
+                        </ReactiveFallback>
+                    </RecoveryNode>
+                </PipelineSequence>
+                <ReactiveFallback name="RecoveryFallback">
+                    <GoalUpdated/>
+                    <RoundRobin name="RecoveryActions">
+                        <Sequence name="ClearingActions">
+                            <ClearEntireCostmap name="ClearLocalCostmap-Subtree" service_name="local_costmap/clear_entirely_local_costmap"/>
+                            <ClearEntireCostmap name="ClearGlobalCostmap-Subtree" service_name="global_costmap/clear_entirely_global_costmap"/>
+                        </Sequence>
+                        <Spin spin_dist="1.57"/>
+                        <Wait wait_duration="5"/>
+                        <BackUp backup_dist="0.15" backup_speed="0.025"/>
+                    </RoundRobin>
+                </ReactiveFallback>
+            </RecoveryNode>
+        </BehaviorTree>
     </root>
 
 The above XML probably looks complex and overwhelming, but we can represent this behavior tree as an actual tree
