@@ -1,7 +1,7 @@
 .. _custom_behavior_tree:
 
-Creating a Custom Behavior Tree in ROS2 / Nav2
-**********************************************
+Creating a Custom Behavior Tree
+*******************************
 
 - `Overview`_
 - `Prerequisites`_
@@ -16,7 +16,7 @@ Overview
 ========
 
 This document serves as a reference guide to the main behavior tree (BT) used in Nav2,
-and explains the process for developing and customizing this BT for ROS 2 and Nav2.
+and explains the process for developing and customizing this BT.
 
 There are many example behavior trees provided in ``nav2_bt_navigator/behavior_trees``,
 but these sometimes have to be re-configured based on the application of the robot. 
@@ -26,8 +26,8 @@ and will show users how to modify this BT in potentially useful ways, using the 
 Prerequisites
 =============
 
-* Have a valid installation of Nav2 
-* Have a robot (simulated, or physical) that can be used for testing that already works with Nav2
+* Have a valid installation of Nav2 (see the `getting started guide <../../getting_started/index.html>`_)
+* Have a robot (simulated, or physical) that can be used for testing that can already navigate with Nav2
 * Become familiar with the concept of a behavior tree before continuing with this tutorial
     * There is a short explaination in `navigation concepts <../../concepts/index.html>`_
     * General tutorial (not Nav2 specific) on the `BehaviorTree CPP V3 <https://www.behaviortree.dev/>`_ website.
