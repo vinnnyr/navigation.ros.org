@@ -48,8 +48,6 @@ We can represent this behavior tree as an actual tree using `Groot <https://gith
 |
 
  .. image:: images/custom_behavior_tree/overall_bt.png
-    :height: 300px
-    :width: 400px
     :align: center
 
 |                  
@@ -102,9 +100,7 @@ This can be represented in the following way:
 
 |
 
- .. image:: images/custom_behavior_tree/overall_bt_with_breakdown.png
-    :height: 300px
-    :width: 400px
+ .. image:: images/custom_behavior_tree/overall_bt_w_breakdown.png
     :align: center
 
 |          
@@ -138,69 +134,47 @@ Replacements in the BT goes without saying for any node, and from here on out I 
 Navigation Subtree
 ======================
 
-Now that we have gone over the control flow between ``NavigateWithReplanning`` and ``RecoveryFallback``, 
-let's focus on ``NavigateWithReplanning``, the main navigation subtree where we hope your robot will spend most of it's time. 
+Now that we have gone over the control flow between the Navigation Subtree and the Recovery Subtree, 
+let's focus on the Navigation Subtree, the main navigation subtree where we hope your robot will spend most of it's time. 
+|
+
+ .. image:: images/custom_behavior_tree/navigation_subtree.png
+    :align: center
+
+|         
 
 The XML of this subtree is as follows:
 
 .. code-block:: xml
 
     <PipelineSequence name="NavigateWithReplanning">
-        <RateController hz="1.0">
+    <RateController hz="1.0">
         <RecoveryNode number_of_retries="1" name="ComputePathToPose">
             <ComputePathToPose goal="{goal}" path="{path}" planner_id="GridBased"/>
             <ReactiveFallback name="ComputePathToPoseRecoveryFallback">
-            <GoalUpdated/>
-            <ClearEntireCostmap name="ClearGlobalCostmap-Context" service_name="global_costmap/clear_entirely_global_costmap"/>
+                <GoalUpdated/>
+                <ClearEntireCostmap name="ClearGlobalCostmap-Context" service_name="global_costmap/clear_entirely_global_costmap"/>
             </ReactiveFallback>
         </RecoveryNode>
-        </RateController>
-        <RecoveryNode number_of_retries="1" name="FollowPath">
+    </RateController>
+    <RecoveryNode number_of_retries="1" name="FollowPath">
         <FollowPath path="{path}" controller_id="FollowPath"/>
         <ReactiveFallback name="FollowPathRecoveryFallback">
             <GoalUpdated/>
             <ClearEntireCostmap name="ClearLocalCostmap-Context" service_name="local_costmap/clear_entirely_local_costmap"/>
         </ReactiveFallback>
-        </RecoveryNode>
+    </RecoveryNode>
     </PipelineSequence>
-
-And the ASCII representation:
-
-.. code-block::
-
-                                              PipelineSequence                                               
-                                                      |                                                      
-                             _________________________|____________________________                          
-                             |                                                    |                          
-                             |                                                    |                          
-                      RateController                                        RecoveryNode                     
-                             |                                                    |                          
-                            _|                                  __________________|_____                     
-                            |                                   |                      |                     
-                            |                                   |                      |                     
-                      RecoveryNode                         FollowPath          ReactiveFallback              
-                            |                                                          |                     
-         ___________________|________                                       ___________|______               
-         |                          |                                       |                |               
-         |                          |                                       |                |               
- ComputePathToPose          ReactiveFallback                           GoalUpdated  ClearEntireCostmap       
-                                    |                                                                        
-                         ___________|______                                                                  
-                         |                |                                                                  
-                         |                |                                                                  
-                    GoalUpdated  ClearEntireCostmap                                                          
-
+                                 
 The parent node of this subtree is ``PipelineSequence``, which is a custom Nav2 BT node.
 While this subtree looks complicated, the crux of the tree can be represented with only one parent and two children nodes like this:
 
-.. code-block::
+|
 
-        PipelineSequence         
-                |                
-         _______|_________       
-         |               |       
-         |               |       
- ComputePathToPose  FollowPath   
+ .. image:: images/custom_behavior_tree/navigation_subtree_bare.png
+    :align: center
+
+|       
 
 The other children and leaves of the tree are simply to throttle, handle failures, and ensuring the robot is responsive to updated goals.
 
@@ -228,33 +202,7 @@ The guide to configure this action node can be found in the `configuration guide
 Finally the ``ReactiveFallback`` node simply will tick it's 2nd child, ``ClearEntireCostmap`` *unless* the state of the condition node ``GoalUpdated`` returns ``SUCCESS`` (when, as the name suggests, the goal is updated).
 In essence, the global costmap will be cleared unless the goal has been updated. ``ClearEntireCostmap`` is a recovery action that implements the ``clear_entirely_costmap`` service. 
 In this case, the BT has set this to the global costmap, which makes sense as the global costmap would be the costmap that would affect the robot's ability to ``ComputePathToPose``.
-
-For convenience, the ``NavigateWithReplanning`` ASCII representation is below again:
-
-.. code-block::
-
-                                              PipelineSequence                                               
-                                                      |                                                      
-                             _________________________|____________________________                          
-                             |                                                    |                          
-                             |                                                    |                          
-                      RateController                                        RecoveryNode                     
-                             |                                                    |                          
-                            _|                                  __________________|_____                     
-                            |                                   |                      |                     
-                            |                                   |                      |                     
-                      RecoveryNode                         FollowPath          ReactiveFallback              
-                            |                                                          |                     
-         ___________________|________                                       ___________|______               
-         |                          |                                       |                |               
-         |                          |                                       |                |               
- ComputePathToPose          ReactiveFallback                           GoalUpdated  ClearEntireCostmap       
-                                    |                                                                        
-                         ___________|______                                                                  
-                         |                |                                                                  
-                         |                |                                                                  
-                    GoalUpdated  ClearEntireCostmap                                                          
-
+                                                      
 Now that we have covered the structure of the first major subtree, the ``ComputePathToPose`` subtree, the ``FollowPath`` subtree is largely symetric.
 
 The ``FollowPath`` action node implements the action client to the ``FollowPath`` ROS 2 action server.
@@ -271,37 +219,39 @@ We have now gone completely over the possibilities and actions in the ``Navigate
 let's move on to the ``RecoveryFallback`` subtree, which will be ticked if the ``NavigateWithReplanning`` overall returns ``FAILURE``. The most likely scenario for 
 this subtree to return ``FAILURE`` if the ``number_of_retries`` is violated on the ``RecoveryNode`` that wraps either the ``ComputePathToPose`` action, or the ``FollowPath`` action.
 
-RecoveryFallback
+Recovery Subtree
 ================
 The recovery fallback subtree is the second big "half" of the Nav2 default ``navigate_w_replanning_and_recovery.xml`` tree.
 In short, this subtree is triggered when the ``NavigateWithReplanning`` subtree returns ``FAILURE`` and this subtree helps select the appropriate recovery to be taken based on how many previous times the recovery and the ``NavigateWithReplanning`` subtree returns ``FAILURE``.
+                               
+|
 
-Below is an ASCII representation of the subtree:
+ .. image:: images/custom_behavior_tree/recovery_subtree.png
+    :align: center
 
-.. code-block::
+|         
 
-                                        |                                             
-                                ReactiveFallback                                      
-                                        |                                             
-       _________________________________|______                                       
-       |                                      |                                       
-       |                                      |                                       
-  GoalUpdated                            RoundRobin                                   
-                                              |                                       
-                                   ___________|__________________________             
-                                   |                       |     |      |             
-                                   |                       |     |      |             
-                               Sequence                  Spin  Wait  BackUp           
-                                   |                                                  
-                        ___________|_________                                         
-                        |                   |                                         
-                        |                   |                                         
-               ClearEntireCostmap  ClearEntireCostmap                                 
+And the XML snippet:
+
+.. code-block:: xml
+
+    <ReactiveFallback name="RecoveryFallback">
+        <GoalUpdated/>
+        <RoundRobin name="RecoveryActions">
+            <Sequence name="ClearingActions">
+                <ClearEntireCostmap name="ClearLocalCostmap-Subtree" service_name="local_costmap/clear_entirely_local_costmap"/>
+                <ClearEntireCostmap name="ClearGlobalCostmap-Subtree" service_name="global_costmap/clear_entirely_global_costmap"/>
+            </Sequence>
+            <Spin spin_dist="1.57"/>
+            <Wait wait_duration="5"/>
+            <BackUp backup_dist="0.15" backup_speed="0.025"/>
+        </RoundRobin>
+    </ReactiveFallback>
 
 The top most parent is ``ReactiveFallback`` which dictates that unless ``GoalUpdated`` returns ``SUCCESS``, tick the 2nd child (in  this case the ``RoundRobin``.
 This should look familiar to the replanning portions of the ``NavigateWithReplanning`` tree. This is a common BT pattern to handle the situation "Unless 'this condition' happens, Do action A".
 
-Condition nodes can be very powerful, and other custom NAV2 condition nodes include:
+Condition nodes can be very powerful, and other custom Nav2 condition nodes include:
 - DistanceTraveled
 - GoalReached
 - isBatteryLow
