@@ -27,14 +27,68 @@ and will show users how to modify this BT in potentially useful ways, using the 
 Prerequisites
 =============
 
-* Have a valid installation of Nav2 (see the `getting started guide <../../getting_started/index.html>`_)
-* Have a robot (simulated, or physical) that can be used for testing that can already navigate with Nav2
-* Become familiar with the concept of a behavior tree before continuing with this tutorial
-    * There is a short explaination in `navigation concepts <../../concepts/index.html>`_
-    * General tutorial (not Nav2 specific) on the `BehaviorTree CPP V3 <https://www.behaviortree.dev/>`_ website.
+- Have a valid installation of Nav2 (see the `getting started guide <../../getting_started/index.html>`_)
+
+- Have a robot (simulated, or physical) that can be used for testing that can already navigate with Nav2
+
+- Become familiar with the concept of a behavior tree before continuing with this tutorial
+    - There is a short explaination in `navigation concepts <../../concepts/index.html>`_
+    - General tutorial (not Nav2 specific) on the `BehaviorTree CPP V3 <https://www.behaviortree.dev/>`_ website.
+    - The "Learn the basics" section on the BehaviorTree CPP V3 website explains the basic generic nodes that will be used that this guide will build upon
 
 Introduction To Nav2 Specific Nodes
 ===================================
+.. warning::
+    Vocabulary can be a large point of confusion here when first starting out.
+        - A ``Node`` when discussing BT is entirely diferent than a ``Node`` in the ROS2 context
+        - A ``Recovery`` in the context of BT is different than a navigation ``Recovery`` behavior
+        - An ``ActionNode`` in the context of BT is not necessarily connected to an Action Server in the ROS2 context (but often it is)
+
+There are quite a few custom Nav2 BT nodes that are provided to be used in the Nav2 specific fashion. Some commonly used Nav2 nodes will be described below.
+The full list of custom BT nodes can be found in the `nav2_behavior_tree plugins folder <https://github.com/ros-planning/navigation2/tree/main/nav2_behavior_tree/plugins>`_.
+The `configuration guide <../../configuration/packages/bt-plugins/configuring-bt-xml.html>`_ can also be quite useful.
+
+Action Nodes
+------------
+
+- ComputePathToPose - ComputePathToPose Action Server Client (Planner Interface)
+- FollowPath - FollowPath Action Server Client (Controller Interface)
+- Spin, Wait, Backup - Recoveries Action Server Client (System Recoveries)
+- ClearCostmapService - ClearCostmapService Server Clients (Contextual Recovery)
+
+The above Action Nodes are all action server clients to their respective action server that will call their action on the first tick of the action node. 
+Upon completion, these action nodes will return ``SUCCESS`` if the action server believes the action has been completed correctly, ``RUNNING`` when still running, and will return ``FAILURE`` otherwise. Note that in the above list,
+the `ClearCostmapSerice` action node is *not* an action server client, but a service client.
+
+Condition Nodes
+---------------
+
+- GoalUpdated
+- GoalReached
+- InitialPoseReceived
+- isBatteryLow
+
+The above list of condition nodes can be used to probe particular aspects of the robot, or the navigation status. They will return ``SUCCESS`` is ``TRUE`` and ``FAILURE`` when ``FALSE`` typically.
+The key condition that is used in the default Nav2 BT is ``GoalUpdated`` which is checked asynchronously at times. This condition node allows for the behavior described as "If the goal has updated, then we must replan".
+Condition nodes are typically paired with ReactiveFallback nodes.
+
+Decorator: Rate Controller
+--------------------------
+The rate controller node helps control the ticking of it's children nodes. The tick rate is an exposed parameter, it is being used in the default Nav2 BT to limit the rate at which the ``ComputePathToPose`` action node is called.
+
+Control: PipelineSequence
+-------------------------
+The PipelineSequence condition node re-ticks previous children when a child returns ``RUNNING``.
+This node is similar to the ``Sequence`` node, with the additional property that the children prior to the "current" are reticked, (resembling the flow of water in a pipe).
+If at any point a child returns ``FAILURE``, so will this node. Upon ``SUCCESS`` of the last node in the sequence, this node will halt and return ``SUCCESS``.
+
+
+Control: RecoveryNode
+---------------------
+
+Control: RoundRobinNode
+-----------------------
+
 
 
 Navigate With Replanning and Recovery
@@ -42,8 +96,6 @@ Navigate With Replanning and Recovery
 
 The following section will describe in detail the concept of the main and default BT currently used in Nav2, ``navigate_w_replanning_and_recovery.xml``.
 This behavior tree replans the global path periodically at 1 Hz and it also has recovery actions.
-
-We can represent this behavior tree as an actual tree using `Groot <https://github.com/BehaviorTree/Groot>`_. You can find instructions on using Groot to visualize Nav2 BTs `here <https://www.github.com/ros-planning/navigation2/tree/main/nav2_behavior_tree%2Fgroot_instructions.md>`_.
 
 |
 
@@ -105,14 +157,6 @@ This can be represented in the following way:
 
 |          
 
-**Warning**
-Vocabulary can be a large point of confusion here for a beginner.
-
-* A ``Node`` when discussing BT is entirely diferent than a ``Node`` in the ROS2 context. 
-* A ``Recovery`` is in the context of BT, not a navigation ``Recovery`` behavior
-
-In Nav2, a ``Recovery`` refers to a specific action executed by the robot. When calling out the ``RecoveryFallback``,
-we mean it in the BT context, but when calling out the ``RecoveryFallback`` we mean it in the Nav2 context.
 
 The ``RecoveryNode`` is the parent to these two subtrees, which means, that if the ``NavigateWithReplanning`` subtree returns ``FAILURE``,
 the ``RecoveryFallback`` subtree will be ticked. 
@@ -197,7 +241,7 @@ It will return ``FAILURE`` if both ``ComputePathToPose`` and the ``ReactiveFallb
 Consider changing the ``number_of_retries`` parameter in the BT if your application requires more retries before a recovery action is triggered.
 
 The ``ComputePathToPose`` is a simple action client to the ``ComputePathToPose`` ROS 2 action server.
-The guide to configure this action node can be found in the `configuration guide <../../configuration/packages/bt-plugins/actions/ComputePathToPose.html>`_.
+The guide to configure this action node can be found in the `compute path configuration guide <../../configuration/packages/bt-plugins/actions/ComputePathToPose.html>`_.
 
 Finally the ``ReactiveFallback`` node simply will tick it's 2nd child, ``ClearEntireCostmap`` *unless* the state of the condition node ``GoalUpdated`` returns ``SUCCESS`` (when, as the name suggests, the goal is updated).
 In essence, the global costmap will be cleared unless the goal has been updated. ``ClearEntireCostmap`` is a recovery action that implements the ``clear_entirely_costmap`` service. 
@@ -206,7 +250,7 @@ In this case, the BT has set this to the global costmap, which makes sense as th
 Now that we have covered the structure of the first major subtree, the ``ComputePathToPose`` subtree, the ``FollowPath`` subtree is largely symetric.
 
 The ``FollowPath`` action node implements the action client to the ``FollowPath`` ROS 2 action server.
-The guide to configure this action node can be found in the `configuration guide <../../configuration/packages/bt-plugins/actions/FollowPath.html>`_.
+The guide to configure this action node can be found in the `follow path configuration guide <../../configuration/packages/bt-plugins/actions/FollowPath.html>`_.
 
 If the ``FollowPath`` action node returns ``SUCCESS`` then this overall subtree will return ``SUCCESS``,
 however if ``FollowPath`` returns ``FAILURE`` then the ``RecoveryNode`` will tick the ``ReactiveFallback``
@@ -275,7 +319,7 @@ To explain ``RoundRobin`` more clearly, let us assume that the robot is stuck so
 
 ``RoundRobin`` will only overall return ``FAILURE`` if **all** children return ``FAILURE``. 
 
-Further details about the ``RoundRobin`` node can be found in the `configuration guide <../../configuration/packages/bt-plugins/controls/RoundRobin.html>`_.
+Further details about the ``RoundRobin`` node can be found in the `round robin configuration guide <../../configuration/packages/bt-plugins/controls/RoundRobin.html>`_.
 
 Custom Action
 =============
