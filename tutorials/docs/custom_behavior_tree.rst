@@ -7,8 +7,8 @@ Creating a Custom Behavior Tree
 - `Prerequisites`_
 - `Introduction To Nav2 Specific Nodes`_
 - `Navigate With Replanning and Recovery`_
-- `NavigateWithReplanning`_
-- `RecoveryFallback`_
+- `Navigation Subtree`_
+- `Recovery Subtree`_
 - `Custom Action`_
 - `Adding to Launch File`_
 - `Testing`_
@@ -42,6 +42,19 @@ Navigate With Replanning and Recovery
 
 The following section will describe in detail the concept of the main and default BT currently used in Nav2, ``navigate_w_replanning_and_recovery.xml``.
 This behavior tree replans the global path periodically at 1 Hz and it also has recovery actions.
+
+We can represent this behavior tree as an actual tree using `Groot <https://github.com/BehaviorTree/Groot>`_. You can find instructions on using Groot to visualize Nav2 BTs `here <https://www.github.com/ros-planning/navigation2/tree/main/nav2_behavior_tree%2Fgroot_instructions.md>`_.
+
+|
+
+ .. image:: images/custom_behavior_tree/overall_bt.png
+    :height: 300px
+    :width: 400px
+    :align: center
+
+|                  
+
+BTs are primarily defined in XML. The tree shown above is represented in XML as follows.
 
 .. code-block:: xml
 
@@ -81,71 +94,20 @@ This behavior tree replans the global path periodically at 1 Hz and it also has 
             </RecoveryNode>
         </BehaviorTree>
     </root>
-
-The above XML probably looks complex and overwhelming, but we can represent this behavior tree as an actual tree
-using this `XML ASCII tool <https://nickpisacane.github.io/AsciiTree/>`_.
-
-.. code-block::
-
-                                                                                                   root                                                                                               
-                                                                                                     |                                                                                                
-                                                                                                    _|                                                                                                
-                                                                                                    |                                                                                                 
-                                                                                                    |                                                                                                 
-                                                                                              BehaviorTree                                                                                            
-                                                                                                    |                                                                                                 
-                                                                                                   _|                                                                                                 
-                                                                                                   |                                                                                                  
-                                                                                                   |                                                                                                  
-                                                                                             RecoveryNode                                                                                             
-                                                                                                   |                                                                                                  
-                                                          _________________________________________|_____________________________________________________                                             
-                                                          |                                                                                             |                                             
-                                                          |                                                                                             |                                             
-                                                  PipelineSequence                                                                              ReactiveFallback                                      
-                                                          |                                                                                             |                                             
-                                 _________________________|____________________________                                _________________________________|______                                       
-                                 |                                                    |                                |                                      |                                       
-                                 |                                                    |                                |                                      |                                       
-                          RateController                                        RecoveryNode                      GoalUpdated                            RoundRobin                                   
-                                 |                                                    |                                                                       |                                       
-                                _|                                  __________________|_____                                                       ___________|__________________________             
-                                |                                   |                      |                                                       |                       |     |      |             
-                                |                                   |                      |                                                       |                       |     |      |             
-                          RecoveryNode                         FollowPath          ReactiveFallback                                            Sequence                  Spin  Wait  BackUp           
-                                |                                                          |                                                       |                                                  
-             ___________________|________                                       ___________|______                                      ___________|_________                                         
-             |                          |                                       |                |                                      |                   |                                         
-             |                          |                                       |                |                                      |                   |                                         
-     ComputePathToPose          ReactiveFallback                           GoalUpdated  ClearEntireCostmap                     ClearEntireCostmap  ClearEntireCostmap                                 
-                                        |                                                                                                                                                             
-                             ___________|______                                                                                                                                                       
-                             |                |                                                                                                                                                       
-                             |                |                                                                                                                                                       
-                        GoalUpdated  ClearEntireCostmap                                                                                                                                               
+                                                                                                                
 
 This is likely still a bit overwhelming, but this tree can be broken into two smaller subtrees that we can focus on one at a time.
 These smaller subtrees are the children of the top-most ``RecoveryNode``, let's call these the ``Navigation`` subtree and the ``Recovery`` subtree.
 This can be represented in the following way:
 
-.. code-block::
+|
 
-                      root                      
-                        |                       
-                       _|                       
-                       |                        
-                       |                        
-                 BehaviorTree                   
-                       |                        
-                      _|                        
-                      |                         
-                      |                         
-                RecoveryNode                    
-                      |                         
-            __________|___________              
-            |                    |              
-            |                    |              
- NavigateWithReplanning  RecoveryFallback       
+ .. image:: images/custom_behavior_tree/overall_bt_with_breakdown.png
+    :height: 300px
+    :width: 400px
+    :align: center
+
+|          
 
 **Warning**
 Vocabulary can be a large point of confusion here for a beginner.
@@ -173,7 +135,7 @@ For more details regarding the ``RecoveryNode`` please see the `configuration gu
 Note that the ``RecoveryNode`` is a custom ``control`` type node made for Nav2, but can be replaced by any other control type node based on the application. 
 Replacements in the BT goes without saying for any node, and from here on out I will only call this out for particularly interesting subsitutions.
 
-NavigateWithReplanning
+Navigation Subtree
 ======================
 
 Now that we have gone over the control flow between ``NavigateWithReplanning`` and ``RecoveryFallback``, 
