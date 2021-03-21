@@ -17,7 +17,7 @@ Overview
 ========
 
 This document serves as a reference guide to the main behavior tree (BT) used in Nav2,
-and explains the process for developing and customizing this BT.
+and explains the process for customizing this BT.
 
 There are many example behavior trees provided in ``nav2_bt_navigator/behavior_trees``,
 but these sometimes have to be re-configured based on the application of the robot. 
@@ -32,9 +32,8 @@ Prerequisites
 - Have a robot (simulated, or physical) that can be used for testing that can already navigate with Nav2
 
 - Become familiar with the concept of a behavior tree before continuing with this tutorial
-    - There is a short explaination in `navigation concepts <../../concepts/index.html>`_
-    - General tutorial (not Nav2 specific) on the `BehaviorTree CPP V3 <https://www.behaviortree.dev/>`_ website.
-    - The "Learn the basics" section on the BehaviorTree CPP V3 website explains the basic generic nodes that will be used that this guide will build upon
+    - Read the short explaination in `navigation concepts <../../concepts/index.html>`_
+    - Read the general tutorial ang guide (not Nav2 specific) on the `BehaviorTree CPP V3 <https://www.behaviortree.dev/>`_ website. Specifically, the "Learn the Basics" section on the BehaviorTree CPP V3 website explains the basic generic nodes that will be used that this guide will build upon
 
 Introduction To Nav2 Specific Nodes
 ===================================
@@ -74,14 +73,73 @@ Condition nodes are typically paired with ReactiveFallback nodes.
 
 Decorator: Rate Controller
 --------------------------
-The rate controller node helps control the ticking of it's children nodes. The tick rate is an exposed parameter, it is being used in the default Nav2 BT to limit the rate at which the ``ComputePathToPose`` action node is called.
+The rate controller node helps control the ticking of it's children nodes. The tick rate is an exposed blackboard parameter, it is being used in the default Nav2 BT to limit the rate at which the ``ComputePathToPose`` action node is called.
 
 Control: PipelineSequence
 -------------------------
 The PipelineSequence condition node re-ticks previous children when a child returns ``RUNNING``.
 This node is similar to the ``Sequence`` node, with the additional property that the children prior to the "current" are reticked, (resembling the flow of water in a pipe).
-If at any point a child returns ``FAILURE``, so will this node. Upon ``SUCCESS`` of the last node in the sequence, this node will halt and return ``SUCCESS``.
+If at any point a child returns ``FAILURE``, all children will be halted and the parent node will also return  ``SUCCESS``. Upon ``SUCCESS`` of the last node in the sequence, this node will halt and return ``SUCCESS``.
 
+To explain this further, here is an example BT that uses PipelineSequence.
+
+|
+
+ .. image:: images/custom_behavior_tree/control_pipelineSequence.png
+    :align: center
+
+|                  
+
+.. code-block:: xml
+
+    <root main_tree_to_execute="MainTree">
+        <BehaviorTree ID="MainTree">
+            <PipelineSequence>
+                <Action_A/>
+                <Action_B/>
+                <Action_C/>
+            </PipelineSequence>
+        </BehaviorTree>
+    </root>
+
+1. ``Action_A``, ``Action_B``, and ``Action_C`` are all IDLE. 
+2. When the parent PipelineSequence is first ticked, let's assume ``Action_A`` returns ``RUNNING``. The parent node will now return ``RUNNING`` and no other nodes are ticked.
+
+|
+
+ .. image:: images/custom_behavior_tree/control_pipelineSequence_RUNNING_IDLE_IDLE.png
+    :align: center
+
+| 
+
+3. Now, let's assume ``Action_A`` returns ``SUCCESS``, ``Action_B`` will now get ticked and will return ``RUNNING``. ``Action_C`` has not yet been ticked so will return ``IDLE``.
+
+|
+
+ .. image:: images/custom_behavior_tree/control_pipelineSequence_SUCCESS_RUNNING_IDLE.png
+    :align: center
+
+| 
+
+4. ``Action_A`` gets ticked again and returns ``RUNNING``, and ``Action_B`` gets re-ticked and returns ``SUCCESS`` and therefore the BT goes on to tick ``Action_C`` for the first time. Let's assume ``Action_C`` returns ``RUNNING``. The retick-ing of ``Action_A`` is what makes PipelineSequence useful.
+
+|
+
+ .. image:: images/custom_behavior_tree/control_pipelineSequence_RUNNING_SUCCESS_RUNNING.png
+    :align: center
+
+| 
+
+5. All actions in the sequence will be re-ticked. Let's assume ``Action_A`` still returns ``RUNNING``, where as ``Action_B`` returns ``SUCCESS`` again, and ``Action_C`` now returns ``SUCCESS`` on this tick.The sequence is now complete, and therefore ``Action_A`` is halted, even though it was still ``RUNNING``.
+
+|
+
+ .. image:: images/custom_behavior_tree/control_pipelineSequence_RUNNING_SUCCESS_SUCCESS.png
+    :align: center
+
+| 
+
+Recall that if ``Action_A``, ``Action_B``, or ``Action_C`` returned ``FAILURE`` at any point  of time, the parent would have returned ``FAILURE`` and halted any children as well.
 
 Control: RecoveryNode
 ---------------------
