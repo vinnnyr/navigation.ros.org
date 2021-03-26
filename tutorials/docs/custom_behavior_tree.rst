@@ -143,6 +143,35 @@ Recall that if ``Action_A``, ``Action_B``, or ``Action_C`` returned ``FAILURE`` 
 
 Control: RecoveryNode
 ---------------------
+The RecoveryNode control node has only two children and returns ``SUCCESS`` if and only if the first child returns ``SUCCESS``. 
+If the first child returns ``FAILURE``, the second child will be ticked. This loop will continue until either:
+- The first child returns ``SUCCESS`` (which results in ``SUCCESS`` of the parent node)
+- The second child returns ``FAILURE`` (which results in ``FAILURE`` of the parent node)
+- The ``number_of_retries`` input parameter is violated.
+
+This node is usually used to link together an action, and a recovery action as the name suggests. The first action will typically be the "main" behavior,
+and the second action will be something to be done in case of ``FAILURE`` of the main behavior. Often, this second child will promote the chance the first action will succeed.
+
+.. code-block:: xml
+
+    <root main_tree_to_execute="MainTree">
+        <BehaviorTree ID="MainTree">
+            <RecoveryNode number_of_retries="1">
+                <ComputePathToPose/>
+                <ClearLocalCostmap/>
+            </RecoveryNode>
+        </BehaviorTree>
+    </root>
+
+|
+
+ .. image:: images/custom_behavior_tree/control_recovery_node.png
+    :align: center
+
+| 
+
+In the above example, let's assume ``ComputePathToPose`` fails. ``ClearLocalCostmap`` will be ticked in response, and return ``SUCCESS``.
+Now that the costmap is clear, lets' say ``ComputePathToPose`` now returns ``SUCCESS``. Then, so will the parent RecoveryNode and the BT will be complete.
 
 Control: RoundRobinNode
 -----------------------
