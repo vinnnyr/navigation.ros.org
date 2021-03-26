@@ -77,7 +77,7 @@ The rate controller node helps control the ticking of it's children nodes. The t
 
 Control: PipelineSequence
 -------------------------
-The PipelineSequence condition node re-ticks previous children when a child returns ``RUNNING``.
+The PipelineSequence control node re-ticks previous children when a child returns ``RUNNING``.
 This node is similar to the ``Sequence`` node, with the additional property that the children prior to the "current" are reticked, (resembling the flow of water in a pipe).
 If at any point a child returns ``FAILURE``, all children will be halted and the parent node will also return  ``SUCCESS``. Upon ``SUCCESS`` of the last node in the sequence, this node will halt and return ``SUCCESS``.
 
