@@ -209,7 +209,8 @@ Here is an example BT we will use to walk though the concept.
 
 | 
 
-2. Upon tick, the first child is ticked. Let's assume it returns ``RUNNING``. In this case, no other children are ticked and the parent node returns ``RUNNING`` as well.
+2. Upon tick of the parent node, the first child (``Action_A`` is ticked. Let's assume on tick the child returns ``RUNNING``.
+In this case, no other children are ticked and the parent node returns ``RUNNING`` as well.
 
 |
 
@@ -218,7 +219,8 @@ Here is an example BT we will use to walk though the concept.
 
 | 
 
-3. Upon the next tick, let's assume that ``Action_A`` returns ``FAILURE``. This means that ``Action_B`` will get ticked next, and ``Action_C`` remains unticked. 
+3. Upon the next tick, let's assume that ``Action_A`` returns ``FAILURE``. 
+This means that ``Action_B`` will get ticked next, and ``Action_C`` remains unticked. 
 Let's assume ``Action_B`` returns ``RUNNING`` this time. That means the parent RoundRobin node will also return ``RUNNING``.
 
 |
@@ -238,7 +240,7 @@ The parent node retains this in it's state, and will tick ``Action_C`` upon the 
 
 | 
 
-5. On this tick, let's assume ``Action_C`` returns``RUNNING``, and so does the parent RoundRobin.
+5. On this tick, let's assume ``Action_C`` returns``RUNNING``, and so does the parent RoundRobin. No other nodes are ticked.
 
 |
 
@@ -313,7 +315,7 @@ BTs are primarily defined in XML. The tree shown above is represented in XML as 
                                                                                                                 
 
 This is likely still a bit overwhelming, but this tree can be broken into two smaller subtrees that we can focus on one at a time.
-These smaller subtrees are the children of the top-most ``RecoveryNode``, let's call these the ``Navigation`` subtree and the ``Recovery`` subtree.
+These smaller subtrees are the children of the top-most ``RecoveryNode``. From this point forward the ``NavigateWithReplanning`` subtree will be referred to as the ``Navigation`` subtree, and the ``RecoveryFallback`` subtree will be known as the ``Recovery`` subtree.
 This can be represented in the following way:
 
 |
@@ -324,10 +326,13 @@ This can be represented in the following way:
 |          
 
 
-The ``RecoveryNode`` is the parent to these two subtrees, which means, that if the ``NavigateWithReplanning`` subtree returns ``FAILURE``,
-the ``RecoveryFallback`` subtree will be ticked. 
-* If the ``RecoveryFallback`` subtree then returns ``SUCCESS`` then ``NavigateWithReplanning`` will be executed again.
-* Otherwise, if the ``RecoveryFallback`` returns ``FAILURE`` (this is not likely ... more on that later), then the overall tree will try again as determined by the parameter ``number_of_retries``.
+The ``RecoveryNode`` is the parent to these two subtrees, which means, that if the ``Navigation`` subtree returns ``FAILURE``,
+the  ``Recovery`` subtree will be ticked. 
+* If the ``Recovery`` subtree then returns ``SUCCESS`` then ``NavigateWithReplanning`` will be executed again.
+
+* Otherwise, if the ``Recovery`` returns ``FAILURE`` (this is not likely ... more on that later),
+then the overall tree will try again as determined by the parameter ``number_of_retries``.
+
 * If the ``number_of_retries`` is exceeded, the overall tree will return ``FAILURE``.
 
 The default ``navigate_w_replanning_and_recovery`` has a ``number_of_retries`` of 6, but this parameter should be changed if your use case has more or less acceptable retries.
@@ -337,9 +342,6 @@ The default ``navigate_w_replanning_and_recovery`` has a ``number_of_retries`` o
     <RecoveryNode number_of_retries="6" name="NavigateRecovery">
 
 For more details regarding the ``RecoveryNode`` please see the `configuration guide <../../configuration/packages/bt-plugins/controls/RecoveryNode.html>`_.
-
-Note that the ``RecoveryNode`` is a custom ``control`` type node made for Nav2, but can be replaced by any other control type node based on the application. 
-Replacements in the BT goes without saying for any node, and from here on out I will only call this out for particularly interesting subsitutions.
 
 Navigation Subtree
 ======================
@@ -423,9 +425,9 @@ however if ``FollowPath`` returns ``FAILURE`` then the ``RecoveryNode`` will tic
 which will tick ``ClearEntireCostmap`` (local) *unless* the ``GoalUpdated`` return ``SUCCESS``.
 The local costmap makes sense to clear in this case as it is the costmap that would impede the robot's ability to follow the path.
 
-In both of these subtrees, checking the ``GoalUpdated`` condition node is what gives this subtree  the name ``NavigateWithReplanning``.
+In both of these subtrees, checking the ``GoalUpdated`` condition node is what allows for replanning.
 
-We have now gone completely over the possibilities and actions in the ``NavigateWithReplanning``,
+We have now gone completely over the possibilities and actions in the ``Navigation`` subtree,
 let's move on to the ``RecoveryFallback`` subtree, which will be ticked if the ``NavigateWithReplanning`` overall returns ``FAILURE``. The most likely scenario for 
 this subtree to return ``FAILURE`` if the ``number_of_retries`` is violated on the ``RecoveryNode`` that wraps either the ``ComputePathToPose`` action, or the ``FollowPath`` action.
 
