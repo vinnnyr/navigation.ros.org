@@ -42,7 +42,9 @@ Introduction To Nav2 Specific Nodes
 .. warning::
     Vocabulary can be a large point of confusion here when first starting out.
         - A ``Node`` when discussing BT is entirely different than a ``Node`` in the ROS2 context
+  
         - A ``Recovery`` in the context of BT is different than a navigation ``Recovery`` behavior
+  
         - An ``ActionNode`` in the context of BT is not necessarily connected to an Action Server in the ROS2 context (but often it is)
 
 There are quite a few custom Nav2 BT nodes that are provided to be used in the Nav2 specific fashion. Some commonly used Nav2 nodes will be described below.
@@ -56,9 +58,9 @@ Action Nodes
 
 - FollowPath - FollowPath Action Server Client (Controller Interface)
 
-- Spin, Wait, Backup - Recoveries Action Server Client (System Recoveries)
+- Spin, Wait, Backup - Recoveries Action Server Client
 
-- ClearCostmapService - ClearCostmapService Server Clients (Contextual Recovery)
+- ClearCostmapService - ClearCostmapService Server Clients
 
 Upon completion, these action nodes will return ``SUCCESS`` if the action server believes the action has been completed correctly, ``RUNNING`` when still running, and will return ``FAILURE`` otherwise. Note that in the above list,
 the `ClearCostmapService` action node is *not* an action server client, but a service client.
@@ -74,8 +76,8 @@ Condition Nodes
 
 - isBatteryLow
 
-The above list of condition nodes can be used to probe particular aspects of the robot, or the navigation status. They will return ``SUCCESS`` is ``TRUE`` and ``FAILURE`` when ``FALSE`` typically.
-The key condition that is used in the default Nav2 BT is ``GoalUpdated`` which is checked asynchronously at times. This condition node allows for the behavior described as "If the goal has updated, then we must replan".
+The above list of condition nodes can be used to probe particular aspects of the system. Typically they will return ``SUCCESS`` is ``TRUE`` and ``FAILURE`` when ``FALSE``.
+The key condition that is used in the default Nav2 BT is ``GoalUpdated`` which is checked asynchronously within particular subtrees. This condition node allows for the behavior described as "If the goal has updated, then we must replan". 
 Condition nodes are typically paired with ReactiveFallback nodes.
 
 Decorator: Rate Controller
@@ -137,7 +139,7 @@ To explain this further, here is an example BT that uses PipelineSequence.
 
 | 
 
-5. All actions in the sequence will be re-ticked. Let's assume ``Action_A`` still returns ``RUNNING``, where as ``Action_B`` returns ``SUCCESS`` again, and ``Action_C`` now returns ``SUCCESS`` on this tick.The sequence is now complete, and therefore ``Action_A`` is halted, even though it was still ``RUNNING``.
+5. All actions in the sequence will be re-ticked. Let's assume ``Action_A`` still returns ``RUNNING``, where as ``Action_B`` returns ``SUCCESS`` again, and ``Action_C`` now returns ``SUCCESS`` on this tick. The sequence is now complete, and therefore ``Action_A`` is halted, even though it was still ``RUNNING``.
 
 |
 
@@ -156,8 +158,10 @@ The Recovery control node has only two children and returns ``SUCCESS`` if and o
 If the first child returns ``FAILURE``, the second child will be ticked. This loop will continue until either:
 
 - The first child returns ``SUCCESS`` (which results in ``SUCCESS`` of the parent node)
+
 - The second child returns ``FAILURE`` (which results in ``FAILURE`` of the parent node)
-- The ``number_of_retries`` input parameter is violated.
+
+- The ``number_of_retries`` input parameter is violated
 
 This node is usually used to link together an action, and a recovery action as the name suggests. The first action will typically be the "main" behavior,
 and the second action will be something to be done in case of ``FAILURE`` of the main behavior. Often, the ticking of the second child action will promote the chance the first action will succeed.
@@ -190,7 +194,7 @@ Control: RoundRobin
 The RoundRobin control node ticks it's children in a round robin fashion until a child returns ``SUCCESS``, in which the parent node will also return ``SUCCESS``. 
 If all children return ``FAILURE`` so will the parent RoundRobin.
 
-Here is an example BT we will use to walk though the concept.
+Here is an example BT we will use to walk through the concept.
 
 |
 
@@ -211,7 +215,7 @@ Here is an example BT we will use to walk though the concept.
         </BehaviorTree>
     </root>
 
-1. All the nodes start at IDLE
+1. All the nodes start at ``IDLE``
 
 |
 
@@ -242,7 +246,7 @@ Let's assume ``Action_B`` returns ``RUNNING`` this time. That means the parent R
 | 
 
 4. Upon this next tick,  let's assume that ``Action_B`` returns ``SUCCESS``. The parent RoundRobin will now halt all children and returns ``SUCCESS``. 
-The parent node retains this in it's state, and will tick ``Action_C`` upon the next tick rather than start from ``Action_A`` like Step 2 did.
+The parent node retains this state information, and will tick ``Action_C`` upon the next tick rather than start from ``Action_A`` like Step 2 did.
 
 |
 
@@ -251,7 +255,7 @@ The parent node retains this in it's state, and will tick ``Action_C`` upon the 
 
 | 
 
-5. On this tick, let's assume ``Action_C`` returns``RUNNING``, and so does the parent RoundRobin. No other nodes are ticked.
+5. On this tick, let's assume ``Action_C`` returns ``RUNNING``, and so does the parent RoundRobin. No other nodes are ticked.
 
 |
 
@@ -269,6 +273,8 @@ The parent node retains this in it's state, and will tick ``Action_C`` upon the 
     :align: center
 
 | 
+
+For additional details regarding the ``RecoveryNode`` please see the `RoundRobin configuration guide <../../configuration/packages/bt-plugins/controls/RoundRobin.html>`_.
 
 Navigate With Replanning and Recovery
 =====================================
@@ -350,7 +356,7 @@ The overall BT will (hopefully) spend most of its time in the ``Navigation`` sub
 (path calculation or path following), contextual recoveries will be attempted.
 
 If the contextual recoveries were still not enough, the ``Navigation`` subtree will return ``FAILURE``. 
-The system will move on the the ``Recovery`` subtree to attempt to clear any system level navigation failures.
+The system will move on to the ``Recovery`` subtree to attempt to clear any system level navigation failures.
 
 This happens until the ``number_of_retries`` for the parent ``RecoveryNode`` is exceeded (which by default is 6).
 
@@ -358,13 +364,11 @@ This happens until the ``number_of_retries`` for the parent ``RecoveryNode`` is 
 
     <RecoveryNode number_of_retries="6" name="NavigateRecovery">
 
-For more details regarding the ``RecoveryNode`` please see the `configuration guide <../../configuration/packages/bt-plugins/controls/RecoveryNode.html>`_.
-
 Navigation Subtree
 ======================
 
-Now that we have gone over the control flow between the Navigation Subtree and the Recovery Subtree, 
-let's focus on the Navigation Subtree, the main navigation subtree where we hope your robot will spend most of it's time. 
+Now that we have gone over the control flow between the ``Navigation`` subtree and the ``Recovery`` subtree, 
+let's focus on the Navigation subtree.
 |
 
  .. image:: images/custom_behavior_tree/navigation_subtree.png
@@ -395,8 +399,9 @@ The XML of this subtree is as follows:
         </RecoveryNode>
     </PipelineSequence>
                                  
-The parent node of this subtree is ``PipelineSequence``, which is a custom Nav2 BT node.
-While this subtree looks complicated, the crux of the tree can be represented with only one parent and two children nodes like this:
+This subtree has two primary actions ``ComputePathToPose`` and ``FollowPath``.
+If either of these two actions fail, they will attempt to clear the failure contextually. 
+The crux of the tree can be represented with only one parent and two children nodes like this:
 
 |
 
@@ -405,53 +410,48 @@ While this subtree looks complicated, the crux of the tree can be represented wi
 
 |       
 
-The other children and leaves of the tree are simply to throttle, handle failures, and ensuring the robot is responsive to updated goals.
+The parent ``PipelineSequence`` node allows the ``ComputePathToPose`` to be ticked, and once that succeeds, ``FollowPath`` to be ticked. 
+While the ``FollowPath`` subtree is being ticked, the ``ComputePathToPose`` subtree will be ticked as well. This allows for the path to be recomputed as the robot moves around. 
 
-The ``PipelineSequence`` allows the ``ComputePathToPose`` to be ticked, and once that succeeds, ``FollowPath`` to be ticked.
-The full description of this control node is in the `configuration guide <../../configuration/packages/bt-plugins/controls/PipelineSequence.html>`_.
-In the above distillation of the BT, if ``ComputePathToPose`` or ``FollowPath`` return ``FAILURE``,
-the parent ``PipelineSequence`` will also return ``FAILURE`` and will therefore the BT will tick the ``RecoveryFallback`` node.
+Both the ``ComputePathToPose`` and the ``FollowPath`` follow the same general structure.
 
-However, in the full ``NavigateWithReplanning`` subtree, there are a few other nodes to consider.
+- Do the action
 
-For example, the ``RateController`` node simply helps keep planning at the specified frequency. The default frequency for this BT is 1 hz. 
-This is done to prevent the BT from hitting the planning server with too many useless requests at the tree update rate (100Hz). Consider changing this frequency to something higher or lower depending on the application and the computational cost of 
-calculating the path. 
+- If the action fails, try to see if we can contextually recover
 
-The next child in this tree is the ``RecoveryNode``, which wraps two children,  the ``ComputePathToPose`` and the ``ReactiveFallback``.
-Recall from above that the ``RecoveryNode`` will return ``SUCCESS`` 
-if ``ComputePathToPose`` returns ``SUCCESS`` or if ``ComputePathToPose`` returns ``FAILURE`` but the ``ReactiveFallback`` returns ``SUCCESS``. 
-It will return ``FAILURE`` if both ``ComputePathToPose`` and the ``ReactiveFallback`` returns ``FAILURE``, or if the ``number_of_retries`` is violated (in this case one retry is allowed) .. which will then  cause the BT to enter the ``RecoveryFallback`` subtree.
+The below is the ``ComputePathToPose`` subtree:
 
-Consider changing the ``number_of_retries`` parameter in the BT if your application requires more retries before a recovery action is triggered.
+|
 
-The ``ComputePathToPose`` is a simple action client to the ``ComputePathToPose`` ROS 2 action server.
-The guide to configure this action node can be found in the `compute path configuration guide <../../configuration/packages/bt-plugins/actions/ComputePathToPose.html>`_.
+ .. image:: images/custom_behavior_tree/contextual_recoveries.png
+    :align: center
 
-Finally the ``ReactiveFallback`` node simply will tick it's 2nd child, ``ClearEntireCostmap`` *unless* the state of the condition node ``GoalUpdated`` returns ``SUCCESS`` (when, as the name suggests, the goal is updated).
-In essence, the global costmap will be cleared unless the goal has been updated. ``ClearEntireCostmap`` is a recovery action that implements the ``clear_entirely_costmap`` service. 
-In this case, the BT has set this to the global costmap, which makes sense as the global costmap would be the costmap that would affect the robot's ability to ``ComputePathToPose``.
-                                                      
-Now that we have covered the structure of the first major subtree, the ``ComputePathToPose`` subtree, the ``FollowPath`` subtree is largely symetric.
+|      
 
-The ``FollowPath`` action node implements the action client to the ``FollowPath`` ROS 2 action server.
-The guide to configure this action node can be found in the `follow path configuration guide <../../configuration/packages/bt-plugins/actions/FollowPath.html>`_.
+The parent ``RecoveryNode`` controls the flow between the action, and the contextual recovery subtree. 
+The contextual recoveries for both ``ComputePathToPose`` and ``FollowPath`` involve checking if the goal has been updated, and involves clearing the relevant costmap.
 
-If the ``FollowPath`` action node returns ``SUCCESS`` then this overall subtree will return ``SUCCESS``,
-however if ``FollowPath`` returns ``FAILURE`` then the ``RecoveryNode`` will tick the ``ReactiveFallback``
-which will tick ``ClearEntireCostmap`` (local) *unless* the ``GoalUpdated`` return ``SUCCESS``.
-The local costmap makes sense to clear in this case as it is the costmap that would impede the robot's ability to follow the path.
+Consider changing the ``number_of_retries`` parameter in the parent ``RecoveryNode`` control node if your application can tolerate more attempts at contextual recoveries before moving on to system-level recoveries.
 
-In both of these subtrees, checking the ``GoalUpdated`` condition node is what allows for replanning.
+The only differences in the BT subtree of ``ComputePathToPose`` and ``FollowPath`` are outlined below:
 
-We have now gone completely over the possibilities and actions in the ``Navigation`` subtree,
-let's move on to the ``RecoveryFallback`` subtree, which will be ticked if the ``NavigateWithReplanning`` overall returns ``FAILURE``. The most likely scenario for 
-this subtree to return ``FAILURE`` if the ``number_of_retries`` is violated on the ``RecoveryNode`` that wraps either the ``ComputePathToPose`` action, or the ``FollowPath`` action.
+- The action node in the subtree:
+    - The ``ComputePathToPose`` subtree centers around the ``ComputePathToPose`` action. 
+    - The ``FollowPath`` subtree centers around the ``FollowPath`` action.
+
+- The ``RateController`` that decorates the ``ComputePathToPose`` subtree
+    The ``RateController`` decorates the ``ComputePathToPose`` subtree to keep planning at the specified frequency. The default frequency for this BT is 1 hz. 
+    This is done to prevent the BT from flooding the planning server with too many useless requests at the tree update rate (100Hz). Consider changing this frequency to something higher or lower depending on the application and the computational cost of 
+    calculating the path. 
+    
+- The costmap that is being cleared within the contextual recovery:
+    - The ``ComputePathToPose`` subtree clears the global costmap. The global costmap is the relevant costmap in the context of the planner
+    - The ``FollowPath`` subtree clears the local costmap. The local costmap is the relevant costmap in the context of the controller
 
 Recovery Subtree
 ================
-The recovery fallback subtree is the second big "half" of the Nav2 default ``navigate_w_replanning_and_recovery.xml`` tree.
-In short, this subtree is triggered when the ``NavigateWithReplanning`` subtree returns ``FAILURE`` and this subtree helps select the appropriate recovery to be taken based on how many previous times the recovery and the ``NavigateWithReplanning`` subtree returns ``FAILURE``.
+The ``Recovery`` subtree is the second big "half" of the Nav2 default ``navigate_w_replanning_and_recovery.xml`` tree.
+In short, this subtree is triggered when the ``Navigation`` subtree returns ``FAILURE`` controls the recoveries at the system level (in the case the contextual recoveries in the ``Navigation`` subtree were not sufficient).
                                
 |
 
@@ -477,34 +477,40 @@ And the XML snippet:
         </RoundRobin>
     </ReactiveFallback>
 
-The top most parent is ``ReactiveFallback`` which dictates that unless ``GoalUpdated`` returns ``SUCCESS``, tick the 2nd child (in  this case the ``RoundRobin``.
-This should look familiar to the replanning portions of the ``NavigateWithReplanning`` tree. This is a common BT pattern to handle the situation "Unless 'this condition' happens, Do action A".
-
-Condition nodes can be very powerful, and other custom Nav2 condition nodes include:
-- DistanceTraveled
-- GoalReached
-- isBatteryLow
-- TimeExpired
+The top most parent, ``ReactiveFallback`` controls the flow between the rest of the system wide recoveries, and asynchronously checking if a new goal has been received.
+If at any point the goal gets updated, this subtree will halt all children and return ``SUCCESS``.
+This should look familiar to the contextual recovery portions of the ``Navigation`` subtree. This is a common BT pattern to handle the situation "Unless 'this condition' happens, Do action A".
 
 These condition nodes can be extremely powerful and are typically paired with ``ReactiveFallback``. It can be easy to imagine wrapping this whole ``navigate_w_replanning_and_recovery`` tree
 in a ``ReactiveFallback`` with a ``isBatteryLow`` condition -- meaning the ``navigate_w_replanning_and_recovery`` tree will execute *unless* the battery becomes low (and then entire a different subtree for docking to recharge). 
 
-If ``GoalUpdated`` returns ``FAILURE``, then the BT moves on to tick the ``RoundRobin`` node.
-``RoundRobin`` is a custom Nav2 node. This control node will keep on ticking the subsequent child, until ``SUCCESS`` is achieved.
-Before ``RoundRobin`` is explained in detail, let's describe what the ``Sequence`` node is. The ``Sequence`` node will tick both of the ``ClearLocalCostmap`` and if that returns ``SUCCESS`` will return ``ClearGlobalCostmap``.
-If either of the children of the ``Sequence`` node returns ``FAILURE`` so will the node itself. Additionally, note that the ``Spin`` and ``BackUp`` nodes are clients to the Nav2 Recovery server.
-In case a custom recovery action is needed, it can be useful to refer to the source of ``Spin`` ``BackUp`` and ``Wait`` as a reference.
+If the goal is never updated, the behavior tree will go on to the ``RoundRobin`` node. These are the default four system-level recoveries in the BT are:
 
-To explain ``RoundRobin`` more clearly, let us assume that the robot is stuck somewhere and we are in this ``RecoveryFallback`` subtree for the first time:
+- A sequence that clears both costmaps (local, and global)
 
-- In the first time, ``RoundRobin`` will tick it's first child, ``Sequence``. Let's assume that these costmap clearing actions return ``SUCCESS``. 
-- Upon the ``SUCCESS`` of the ``Sequence`` child (which just means that the costmaps were correctly cleared), the robot will attempt to renavigate in the ``NavigateWithReplanning`` subtree.
-- Let's say that clearing the costmaps were not enough, the robot is **still** stuck. Upon entering the ``RoundRobin`` portion of the ``RecoveryFallback`` subtree, the subtree will tick the next child ``Spin``. ``RoundRobin`` retains a memory of nodes visited, and will **not** try to re-clear the costmaps again in this recovery.
-- Regardless if ``Spin`` returns ``FAILURE`` or ``SUCCESS`` the next time this portion of the subtree enters, the next subsequent child will be ticked (in this case ``Wait``), and so on. Upon reaching the last child (in this case ``BackUp``), the node will wrap around and tick the ``ClearCostmapSequence`` again. 
+- ``Spin`` recovery action
 
-``RoundRobin`` will only overall return ``FAILURE`` if **all** children return ``FAILURE``. 
+- ``Wait`` recovery action
 
-Further details about the ``RoundRobin`` node can be found in the `round robin configuration guide <../../configuration/packages/bt-plugins/controls/RoundRobin.html>`_.
+- ``BackUp`` recovery action
+
+Upon ``SUCCESS`` of any of the four children of the parent ``RoundRobin``, the robot will attempt to renavigate in the ``Navigation`` subtree. 
+If this renavigation was not successful, the next child of the ``RoundRobin`` will be ticked.
+
+For example, let's say the robot is stuck and the ``Navigation`` subtree returns ``FAILURE``:
+(for the sake of this example, let's assume that the goal is never updated).
+
+1. The Costmap clearing sequence in the ``Recovery`` subtree is attempted, and returns ``SUCCESS``. The robot now moves to ``Navigation`` subtree again
+
+2. Let's assume that clearing both costmaps was not sufficient, and the ``Navigation`` subtree returns ``FAILURE`` once again. The robot now ticks the ``Recovery`` subtree
+
+3. In the ``Recovery`` subtree, the ``Spin`` action will be ticked. If this returns ``SUCCESS``, then the robot will return to the main ``Navigation`` subtree *BUT* let's assume that the ``Spin`` recovery returns ``FAILURE``. In this case, the tree will *remain* in the ``Recovery`` subtree
+
+4. Let's say the next recovery action, ``Wait`` returns ``SUCCESS``. The robot will then move on to the ``Navigation`` subtree
+
+5. Assume  the ``Navigation`` subtree returns ``FAILURE`` (clearing the costmaps, attempting a spin, and waiting were *still* not sufficient to recover the system. The robot will move onto the ``Recovery`` subtree and attempt the ``BackUp`` action
+
+The above logic will go on indefinitely until the ``number_of_retries`` in the parent of the ``Navigate`` subtree and ``Recovery`` subtree is exceeded, or if all the system-wide recoveries in the ``Recovery`` subtree return ``FAILURE`` (this is unlikely, and likely points to some other system failure).
 
 Custom Action
 =============
