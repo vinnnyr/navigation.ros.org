@@ -32,14 +32,16 @@ Prerequisites
 - Have a robot (simulated, or physical) that can be used for testing that can already navigate with Nav2
 
 - Become familiar with the concept of a behavior tree before continuing with this tutorial
-    - Read the short explaination in `navigation concepts <../../concepts/index.html>`_
-    - Read the general tutorial ang guide (not Nav2 specific) on the `BehaviorTree CPP V3 <https://www.behaviortree.dev/>`_ website. Specifically, the "Learn the Basics" section on the BehaviorTree CPP V3 website explains the basic generic nodes that will be used that this guide will build upon
+  
+    - Read the short explanation in `navigation concepts <../../concepts/index.html>`_
+  
+    - Read the general tutorial ang guide (not Nav2 specific) on the `BehaviorTree CPP V3 <https://www.behaviortree.dev/>`_ website. Specifically, the "Learn the Basics" section on the BehaviorTree CPP V3 website explains the basic generic nodes that will be used that this guide will build upon.
 
 Introduction To Nav2 Specific Nodes
 ===================================
 .. warning::
     Vocabulary can be a large point of confusion here when first starting out.
-        - A ``Node`` when discussing BT is entirely diferent than a ``Node`` in the ROS2 context
+        - A ``Node`` when discussing BT is entirely different than a ``Node`` in the ROS2 context
         - A ``Recovery`` in the context of BT is different than a navigation ``Recovery`` behavior
         - An ``ActionNode`` in the context of BT is not necessarily connected to an Action Server in the ROS2 context (but often it is)
 
@@ -51,20 +53,25 @@ Action Nodes
 ------------
 
 - ComputePathToPose - ComputePathToPose Action Server Client (Planner Interface)
+
 - FollowPath - FollowPath Action Server Client (Controller Interface)
+
 - Spin, Wait, Backup - Recoveries Action Server Client (System Recoveries)
+
 - ClearCostmapService - ClearCostmapService Server Clients (Contextual Recovery)
 
-The above Action Nodes are all action server clients to their respective action server that will call their action on the first tick of the action node. 
 Upon completion, these action nodes will return ``SUCCESS`` if the action server believes the action has been completed correctly, ``RUNNING`` when still running, and will return ``FAILURE`` otherwise. Note that in the above list,
-the `ClearCostmapSerice` action node is *not* an action server client, but a service client.
+the `ClearCostmapService` action node is *not* an action server client, but a service client.
 
 Condition Nodes
 ---------------
 
 - GoalUpdated
+
 - GoalReached
+
 - InitialPoseReceived
+
 - isBatteryLow
 
 The above list of condition nodes can be used to probe particular aspects of the robot, or the navigation status. They will return ``SUCCESS`` is ``TRUE`` and ``FAILURE`` when ``FALSE`` typically.
@@ -73,12 +80,12 @@ Condition nodes are typically paired with ReactiveFallback nodes.
 
 Decorator: Rate Controller
 --------------------------
-The rate controller node helps control the ticking of it's children nodes. The tick rate is an exposed blackboard parameter, it is being used in the default Nav2 BT to limit the rate at which the ``ComputePathToPose`` action node is called.
+The rate controller node helps control the ticking of its children nodes. The tick rate is an exposed blackboard parameter, it is being used in the default Nav2 BT to limit the rate at which the ``ComputePathToPose`` action node is called.
 
 Control: PipelineSequence
 -------------------------
 The PipelineSequence control node re-ticks previous children when a child returns ``RUNNING``.
-This node is similar to the ``Sequence`` node, with the additional property that the children prior to the "current" are reticked, (resembling the flow of water in a pipe).
+This node is similar to the ``Sequence`` node, with the additional property that the children prior to the "current" are re-ticked, (resembling the flow of water in a pipe).
 If at any point a child returns ``FAILURE``, all children will be halted and the parent node will also return  ``SUCCESS``. Upon ``SUCCESS`` of the last node in the sequence, this node will halt and return ``SUCCESS``.
 
 To explain this further, here is an example BT that uses PipelineSequence.
@@ -176,7 +183,7 @@ Now that we have cleared the costmap, lets' say the robot is correctly able to c
 
 Control: RoundRobin
 -----------------------
-The RoundRobinNode ticks it's children in a round robin fashion until a child returns ``SUCCESS``, in which the parent node will also return ``SUCCESS``. 
+The RoundRobin control node ticks it's children in a round robin fashion until a child returns ``SUCCESS``, in which the parent node will also return ``SUCCESS``. 
 If all children return ``FAILURE`` so will the parent RoundRobin.
 
 Here is an example BT we will use to walk though the concept.
