@@ -86,7 +86,7 @@ Control: PipelineSequence
 -------------------------
 The PipelineSequence control node re-ticks previous children when a child returns ``RUNNING``.
 This node is similar to the ``Sequence`` node, with the additional property that the children prior to the "current" are re-ticked, (resembling the flow of water in a pipe).
-If at any point a child returns ``FAILURE``, all children will be halted and the parent node will also return  ``SUCCESS``. Upon ``SUCCESS`` of the last node in the sequence, this node will halt and return ``SUCCESS``.
+If at any point a child returns ``FAILURE``, all children will be halted and the parent node will also return ``FAILURE``. Upon ``SUCCESS`` of the last node in the sequence, this node will halt and return ``SUCCESS``.
 
 To explain this further, here is an example BT that uses PipelineSequence.
 
