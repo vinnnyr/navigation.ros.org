@@ -332,17 +332,23 @@ This can be represented in the following way:
 
 |          
 
+The ``Navigation`` subtree mainly involves actual navigation behavior:
 
-The ``RecoveryNode`` is the parent to these two subtrees, which means, that if the ``Navigation`` subtree returns ``FAILURE``,
-the  ``Recovery`` subtree will be ticked. 
-* If the ``Recovery`` subtree then returns ``SUCCESS`` then ``NavigateWithReplanning`` will be executed again.
+- calculating a path
+  
+- following a path
+  
+- contextual recovery behaviors for each of the above primary navigation behaviors
+  
+The ``Recovery`` subtree includes recovery behaviors for system level failures or items that were not easily dealt with internally.
 
-* Otherwise, if the ``Recovery`` returns ``FAILURE`` (this is not likely ... more on that later),
-then the overall tree will try again as determined by the parameter ``number_of_retries``.
+The overall BT will (hopefully) spend most of its time in the ``Navigation`` subtree. If either of the two main behaviors in the ``Navigation`` subtree fail
+(path calculation or path following), contextual recoveries will be attempted.
 
-* If the ``number_of_retries`` is exceeded, the overall tree will return ``FAILURE``.
+If the contextual recoveries were still not enough, the ``Navigation`` subtree will return ``FAILURE``. 
+The system will move on the the ``Recovery`` subtree to attempt to clear any system level navigation failures.
 
-The default ``navigate_w_replanning_and_recovery`` has a ``number_of_retries`` of 6, but this parameter should be changed if your use case has more or less acceptable retries.
+This happens until the ``number_of_retries`` for the parent ``RecoveryNode`` is exceeded (which by default is 6).
 
 .. code-block:: xml
 
