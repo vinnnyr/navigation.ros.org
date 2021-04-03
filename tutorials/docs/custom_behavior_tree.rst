@@ -148,6 +148,8 @@ To explain this further, here is an example BT that uses PipelineSequence.
 
 Recall that if ``Action_A``, ``Action_B``, or ``Action_C`` returned ``FAILURE`` at any point  of time, the parent would have returned ``FAILURE`` and halted any children as well.
 
+For additional details regarding the ``PipelineSequence`` please see the `PipelineSequence configuration guide <../../configuration/packages/bt-plugins/controls/PipelineSequence.html>`_.
+
 Control: Recovery
 ---------------------
 The Recovery control node has only two children and returns ``SUCCESS`` if and only if the first child returns ``SUCCESS``. 
@@ -180,6 +182,8 @@ and the second action will be something to be done in case of ``FAILURE`` of the
 
 In the above example, let's assume ``ComputePathToPose`` fails. ``ClearLocalCostmap`` will be ticked in response, and return ``SUCCESS``.
 Now that we have cleared the costmap, lets' say the robot is correctly able to compute the path and ``ComputePathToPose`` now returns ``SUCCESS``. Then, the parent RecoveryNode will also return ``SUCCESS`` and the BT will be complete.
+
+For additional details regarding the ``RecoveryNode`` please see the `RecoveryNode configuration guide <../../configuration/packages/bt-plugins/controls/RecoveryNode.html>`_.
 
 Control: RoundRobin
 -----------------------
